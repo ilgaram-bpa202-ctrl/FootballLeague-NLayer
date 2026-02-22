@@ -19,6 +19,14 @@ namespace FootballLeague.API
                 });
             });
 
+            // Bunlar proqrama deyir ki: "Kimsə səndən IGenericRepository və ya IService istəsə, get DAL və Business qatlarındakı uyğun class-ları tapıb ona ver."
+            // AddScoped o deməkdir ki, hər yeni istək (request) gələndə yeni bir obyekt yaradılır və işi bitəndə yaddaşdan silinir (performans üçün əladır).
+            builder.Services.AddScoped(typeof(FootballLeague.Core.Repositories.IGenericRepository<>), typeof(FootballLeague.DAL.Repositories.GenericRepository<>));
+            builder.Services.AddScoped(typeof(FootballLeague.Core.Services.IService<>), typeof(FootballLeague.Business.Services.Service<>));
+
+
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
             // Add services to the container.
 
             builder.Services.AddControllers();
@@ -26,6 +34,12 @@ namespace FootballLeague.API
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

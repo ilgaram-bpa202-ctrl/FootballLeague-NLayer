@@ -48,5 +48,9 @@ namespace FootballLeague.DAL.Repositories
         {
             return _dbSet.Where(expression);
         }
+        public async Task SaveAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
     }
 }

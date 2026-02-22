@@ -12,5 +12,6 @@ namespace FootballLeague.Core.Repositories
         Task AddAsync(T entity); // Baza-ya yeni məlumat əlavə et
         void Update(T entity); // Məlumatı yenilə
         void Remove(T entity); // Məlumatı sil
+        Task SaveAsync();
     }
 }
