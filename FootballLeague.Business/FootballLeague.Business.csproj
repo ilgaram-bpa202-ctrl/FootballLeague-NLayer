@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FootballLeague.Core\FootballLeague.Core.csproj" />
+    <ProjectReference Include="..\FootballLeague.DAL\FootballLeague.DAL.csproj" />
+  </ItemGroup>
+
+</Project>
