@@ -1,43 +1,83 @@
-﻿using FootballLeague.Core.Entities;
+﻿using AutoMapper;
+using FootballLeague.Core.DTOs;
+using FootballLeague.Core.Entities;
 using FootballLeague.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FootballLeague.API.Controllers
 {
-    // [Route] API-nin adresini təyin edir. Məsələn: localhost:1234/api/Team
     [Route("api/[controller]")]
-    // [ApiController] bu class-ın sadə bir veb səhifə yox, xüsusi qaydaları olan bir API olduğunu proqrama deyir.
     [ApiController]
     public class TeamController : ControllerBase
     {
         private readonly IService<Team> _teamService;
+        private readonly IMapper _mapper; // AutoMapper-i bura əlavə etdik
 
-        // Constructor: Ofisianta (Controller) Aşpazı (Service) veririk ki, işləyə bilsin.
-        public TeamController(IService<Team> teamService)
+        // Constructor: İndi ofisianta həm Aşpazı (Service), həm də Tərcüməçini (Mapper) veririk
+        public TeamController(IService<Team> teamService, IMapper mapper)
         {
             _teamService = teamService;
+            _mapper = mapper;
         }
 
         // GET: api/Team
-        [HttpGet] // Müştəri məlumatları GÖRMƏK istəyəndə bu "verb" (feil) işə düşür
+        [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            // Aşpaza deyirik: "Bütün komandaları gətir"
+            // 1. Bütün komandaları bazadan (Entity kimi) çəkirik
             var teams = await _teamService.GetAllAsync();
 
-            // Ok() metodu HTTP 200 (Hər şey qaydasındadır) status kodu ilə məlumatı geri qaytarır
-            return Ok(teams);
+            // 2. Tərcüməçiyə deyirik: "Bu Team siyahısını TeamDto siyahısına çevir"
+            // (Artıq müştəri lazımsız məlumatları (Players, CreatedDate) GÖRMƏYƏCƏK!)
+            var teamsDtos = _mapper.Map<IEnumerable<TeamDto>>(teams);
+
+            return Ok(teamsDtos);
         }
 
         // POST: api/Team
-        [HttpPost] // Müştəri yeni məlumat ƏLAVƏ ETMƏK istəyəndə bu "verb" işə düşür
-        public async Task<IActionResult> Add(Team team)
+        [HttpPost]
+        public async Task<IActionResult> Add(TeamCreateDto teamDto)
         {
-            // Aşpaza deyirik: "Gələn bu yeni komandanı sistemə əlavə et"
-            var newTeam = await _teamService.AddAsync(team);
+            // Bayaq alt-alta 10 sətir əllə yazdığımız çevirmə (Mapping) kodunun yerinə sadəcə 1 SƏTİR yazırıq:
+            // Tərcüməçiyə deyirik: "Müştəridən gələn DTO-nu əsl Team obyektinə çevir"
+            var newTeam = _mapper.Map<Team>(teamDto);
 
-            // Created() metodu HTTP 201 (Uğurla yaradıldı) status kodu ilə yaradılan obyekti geri qaytarır
-            return Created(string.Empty, newTeam);
+            // Çevrilmiş obyekti bazaya yazırıq
+            var addedTeam = await _teamService.AddAsync(newTeam);
+
+            // Bazaya yazılandan sonra geri qaytaranda da DTO kimi qaytarırıq ki, səliqəli olsun
+            var addedTeamDto = _mapper.Map<TeamDto>(addedTeam);
+
+            return Created(string.Empty, addedTeamDto);
+        }
+        // GET: api/Team/5 (Tək bir komandanı ID-yə görə gətirir)
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var team = await _teamService.GetByIdAsync(id);
+            var teamDto = _mapper.Map<TeamDto>(team);
+            return Ok(teamDto);
+        }
+
+        // PUT: api/Team (Komandanın məlumatlarını yeniləyir)
+        [HttpPut]
+        public async Task<IActionResult> Update(TeamDto teamDto)
+        {
+            // DTO-nu əsl Team obyektinə çeviririk
+            var team = _mapper.Map<Team>(teamDto);
+
+            await _teamService.UpdateAsync(team);
+            return NoContent(); // 204 status kodu (Uğurludur, amma geri məlumat qaytarmağa ehtiyac yoxdur)
+        }
+
+        // DELETE: api/Team/5 (Komandanı silir)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Remove(int id)
+        {
+            // Sadəcə id-ni göndəririk ki, get bu nömrəli komandanı sil
+            await _teamService.RemoveAsync(id);
+
+            return NoContent(); // 204 status kodu
         }
     }
 }

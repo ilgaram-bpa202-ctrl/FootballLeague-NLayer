@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FootballLeague.API
 {
@@ -30,8 +31,23 @@ namespace FootballLeague.API
             // Add services to the container.
 
             builder.Services.AddControllers();
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll",
+                    builder =>
+                    {
+                        builder.AllowAnyOrigin()
+                               .AllowAnyMethod()
+                               .AllowAnyHeader();
+                    });
+            });
+
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+
+            // AutoMapper-i sistemə əlavə edirik və deyirik ki, "Get mənim yazdığım xəritəni (MapProfile) tap və öyrən"
+            builder.Services.AddAutoMapper(typeof(Program));
 
             var app = builder.Build();
 
@@ -48,6 +64,8 @@ namespace FootballLeague.API
             }
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowAll");
 
             app.UseAuthorization();
 
