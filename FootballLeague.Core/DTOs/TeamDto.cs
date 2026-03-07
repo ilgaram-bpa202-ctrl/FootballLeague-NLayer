@@ -10,5 +10,6 @@
         public int Won { get; set; }
         public int Drawn { get; set; }
         public int Lost { get; set; }
+        public List<PlayerDto> Players { get; set; }
     }
 }

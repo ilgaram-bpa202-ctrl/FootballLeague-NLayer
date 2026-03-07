@@ -14,6 +14,12 @@ namespace FootballLeague.API.Mapping
 
             // TeamCreateDto obyekti Team-ə çevrilə bilər
             CreateMap<TeamCreateDto, Team>();
+
+            CreateMap<Player, PlayerDto>().ReverseMap();
+            CreateMap<PlayerCreateDto, Player>();
+
+            CreateMap<Match, MatchDto>().ReverseMap();
+            CreateMap<MatchCreateDto, Match>();
         }
     }
 }
