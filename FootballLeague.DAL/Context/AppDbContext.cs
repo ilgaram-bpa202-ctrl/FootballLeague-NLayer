@@ -1,26 +1,26 @@
 ﻿using FootballLeague.Core.Entities;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace FootballLeague.DAL.Context
 {
-    public class AppDbContext : DbContext
+    // DİQQƏT: DbContext əvəzinə IdentityDbContext<AppUser> oldu
+    public class AppDbContext : IdentityDbContext<AppUser>
     {
-        // Bu konstruktor API qatından baza ayarlarını (məsələn, SQL şifrəsini) bura göndərmək üçündür
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
 
-        // Cədvəllərimizi bura əlavə edirik (DbSet)
         public DbSet<Team> Teams { get; set; }
         public DbSet<Player> Players { get; set; }
         public DbSet<Match> Matches { get; set; }
 
-        // Bəzi xüsusi baza qaydalarını burada yazırıq
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // ÇOX VACİB: Match cədvəlində 2 dənə Team olduğu üçün SQL Server "Multiple Cascade Paths" xətası verir.
-            // Bunun qarşısını almaq üçün deyirik ki, Komanda silinəndə Oyunlar avtomatik silinməsin (Restrict).
+            // ÇOX VACİB: IdentityDbContext istifadə edəndə base metodu mütləq ƏN ÜSTDƏ çağırılmalıdır!
+            base.OnModelCreating(modelBuilder);
 
+            // Sənin əvvəldən yazdığın xəta önləyici kodlar öz yerində qalır:
             modelBuilder.Entity<Match>()
                 .HasOne(m => m.HomeTeam)
                 .WithMany()
@@ -32,8 +32,6 @@ namespace FootballLeague.DAL.Context
                 .WithMany()
                 .HasForeignKey(m => m.AwayTeamId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            base.OnModelCreating(modelBuilder);
         }
     }
 }

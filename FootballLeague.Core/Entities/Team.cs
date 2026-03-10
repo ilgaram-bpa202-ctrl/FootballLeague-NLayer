@@ -16,5 +16,9 @@ namespace FootballLeague.Core.Entities
 
         // Bir komandanın çoxlu oyunçusu olar (Baza əlaqəsi)
         public ICollection<Player> Players { get; set; }
+
+        public int MatchesPlayed { get; set; }
+        public int GoalsFor { get; set; }      // Vurulan qollar
+        public int GoalsAgainst { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using FootballLeague.Core.DTOs;
 using FootballLeague.Core.Entities;
 using FootballLeague.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using FootballLeague.Business.Services;
 
 namespace FootballLeague.API.Controllers
 {
@@ -10,15 +11,28 @@ namespace FootballLeague.API.Controllers
     [ApiController]
     public class TeamController : ControllerBase
     {
-        private readonly IService<Team> _teamService;
-        private readonly IMapper _mapper; // AutoMapper-i bura əlavə etdik
+        private readonly ITeamService _teamService; // DIQQƏT: IService yox, ITeamService oldu
+        private readonly IMapper _mapper;
 
-        // Constructor: İndi ofisianta həm Aşpazı (Service), həm də Tərcüməçini (Mapper) veririk
-        public TeamController(IService<Team> teamService, IMapper mapper)
+        public TeamController(ITeamService teamService, IMapper mapper)
         {
             _teamService = teamService;
             _mapper = mapper;
         }
+
+        [HttpGet("[action]/{id}")]
+        public async Task<IActionResult> GetTeamWithPlayers(int id)
+        {
+            var team = await _teamService.GetSingleTeamWithPlayersAsync(id);
+
+            if (team == null) throw new Exception($"{id} nömrəli komanda tapılmadı!");
+
+            var teamDto = _mapper.Map<TeamDto>(team);
+            return Ok(teamDto);
+        }
+    
+    // Digər GetAll, Add, Remove metodlarında dəyişiklik etməyə ehtiyac yoxdur.
+    
 
         // GET: api/Team
         [HttpGet]
@@ -55,6 +69,13 @@ namespace FootballLeague.API.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var team = await _teamService.GetByIdAsync(id);
+
+            // Əgər komanda tapılmasa, qəsdən "partlayış" (Exception) yaradırıq!
+            if (team == null)
+            {
+                throw new Exception($"{id} nömrəli komanda bazada tapılmadı!");
+            }
+
             var teamDto = _mapper.Map<TeamDto>(team);
             return Ok(teamDto);
         }
@@ -74,10 +95,27 @@ namespace FootballLeague.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Remove(int id)
         {
-            // Sadəcə id-ni göndəririk ki, get bu nömrəli komandanı sil
-            await _teamService.RemoveAsync(id);
+            var team = await _teamService.GetByIdAsync(id);
 
-            return NoContent(); // 204 status kodu
+            if (team == null)
+            {
+                throw new Exception($"{id} nömrəli komanda tapılmadığı üçün silinə bilməz!");
+            }
+
+            await _teamService.RemoveAsync(id);
+            return NoContent();
+        }
+
+        // GET: api/Team/GetStandings
+        [HttpGet("[action]")]
+        public async Task<IActionResult> GetStandings()
+        {
+            var teams = await _teamService.GetStandingsAsync();
+
+            // Müşteriye (Swagger/Frontend) giderken yine DTO'ya çeviriyoruz ki şifreler vs. sızmasın
+            var standingsDto = _mapper.Map<IEnumerable<TeamDto>>(teams);
+
+            return Ok(standingsDto);
         }
     }
 }

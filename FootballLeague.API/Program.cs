@@ -1,8 +1,24 @@
-﻿
+﻿using FluentValidation.AspNetCore;
+using FootballLeague.API.Middlewares;
+using FootballLeague.Business.Services;
+using FootballLeague.Core.Entities;
+using FootballLeague.Core.Repositories;
+using FootballLeague.Core.Services;
+using FootballLeague.Core.UnitOfWorks;
+using FootballLeague.Core.Validators; // Bunu yuxarıya əlavə et
+using FootballLeague.DAL.Context;
+using FootballLeague.DAL.Repositories;
+using FootballLeague.DAL.UnitOfWorks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+// ... digər kodlar
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
-namespace FootballLeague.API
+
+namespace FootballLeague.API    
 {
     public class Program
     {
@@ -20,17 +36,52 @@ namespace FootballLeague.API
                 });
             });
 
+            // 1. Identity (İstifadəçi) Qeydiyyatı
+            builder.Services.AddIdentity<AppUser, IdentityRole>()
+                .AddEntityFrameworkStores<AppDbContext>()
+                .AddDefaultTokenProviders();
+
+            // 2. JWT Authentication (Token) Qeydiyyatı
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.SaveToken = true;
+                options.RequireHttpsMetadata = false;
+                options.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidAudience = builder.Configuration["Jwt:Audience"],
+                    ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                    // appsettings.json-dakı gizli şifrəmizi oxuyuruq:
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+                };
+            });
+
             // Bunlar proqrama deyir ki: "Kimsə səndən IGenericRepository və ya IService istəsə, get DAL və Business qatlarındakı uyğun class-ları tapıb ona ver."
             // AddScoped o deməkdir ki, hər yeni istək (request) gələndə yeni bir obyekt yaradılır və işi bitəndə yaddaşdan silinir (performans üçün əladır).
             builder.Services.AddScoped(typeof(FootballLeague.Core.Repositories.IGenericRepository<>), typeof(FootballLeague.DAL.Repositories.GenericRepository<>));
             builder.Services.AddScoped(typeof(FootballLeague.Core.Services.IService<>), typeof(FootballLeague.Business.Services.Service<>));
 
+            // Mövcud olan AddScoped-ların altına əlavə et:
+            builder.Services.AddScoped<ITeamRepository, TeamRepository>();
+            builder.Services.AddScoped<ITeamService, TeamService>();
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddScoped<FootballLeague.Core.Services.IMatchService, FootballLeague.Business.Services.MatchService>();
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            
+
+            builder.Services.AddControllers()
+                .AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<TeamCreateDtoValidator>());
 
             builder.Services.AddCors(options =>
             {
@@ -62,11 +113,14 @@ namespace FootballLeague.API
             {
                 app.MapOpenApi();
             }
+            app.UseCustomException();
 
             app.UseHttpsRedirection();
 
             app.UseCors("AllowAll");
 
+
+            app.UseAuthentication();
             app.UseAuthorization();
 
 

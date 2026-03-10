@@ -11,5 +11,9 @@
         public int Drawn { get; set; }
         public int Lost { get; set; }
         public List<PlayerDto> Players { get; set; }
+
+        public int MatchesPlayed { get; set; }
+        public int GoalsFor { get; set; }      // Vurulan qollar
+        public int GoalsAgainst { get; set; }
     }
 }

@@ -1,33 +1,41 @@
 ﻿using AutoMapper;
+using FootballLeague.Core.DTOs;
+using FootballLeague.Core.Entities;
 using FootballLeague.Core.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.RegularExpressions;
 
-[Route("api/[controller]")]
-[ApiController]
-public class MatchController : ControllerBase
+namespace FootballLeague.API.Controllers
 {
-    private readonly IService<Match> _matchService;
-    private readonly IMapper _mapper;
-
-    public MatchController(IService<Match> matchService, IMapper mapper)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class MatchController : ControllerBase
     {
-        _matchService = matchService;
-        _mapper = mapper;
-    }
+        private readonly IMatchService _matchService;
+        private readonly IMapper _mapper;
 
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        var matches = await _matchService.GetAllAsync();
-        return Ok(_mapper.Map<IEnumerable<MatchDto>>(matches));
-    }
+        public MatchController(IMatchService matchService, IMapper mapper)
+        {
+            _matchService = matchService;
+            _mapper = mapper;
+        }
 
-    [HttpPost]
-    public async Task<IActionResult> Add(MatchCreateDto dto)
-    {
-        var match = _mapper.Map<Match>(dto);
-        await _matchService.AddAsync(match);
-        return Ok(_mapper.Map<MatchDto>(match));
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var matches = await _matchService.GetAllAsync();
+            var matchesDtos = _mapper.Map<IEnumerable<MatchDto>>(matches);
+            return Ok(matchesDtos);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Add(MatchCreateDto matchDto)
+        {
+            var newMatch = _mapper.Map<Match>(matchDto);
+
+            // Bura dəyişdi! Artıq ağıllı metodumuzu çağırırıq
+            var addedMatch = await _matchService.AddMatchAndUpdatePointsAsync(newMatch);
+
+            return Created(string.Empty, _mapper.Map<MatchDto>(addedMatch));
+        }
     }
 }
