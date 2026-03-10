@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Microsoft.AspNetCore.Authorization; // Bunu yuxarıya əlavə et
+using AutoMapper;
 using FootballLeague.Core.DTOs;
 using FootballLeague.Core.Entities;
 using FootballLeague.Core.Services;
@@ -8,6 +9,7 @@ namespace FootballLeague.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // YENİ: Qapıya qıfıl vurduq!
     public class MatchController : ControllerBase
     {
         private readonly IMatchService _matchService;

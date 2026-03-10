@@ -1,14 +1,16 @@
 ﻿using AutoMapper;
+using FootballLeague.Business.Services;
 using FootballLeague.Core.DTOs;
 using FootballLeague.Core.Entities;
 using FootballLeague.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using FootballLeague.Business.Services;
 
 namespace FootballLeague.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] // Bütün Team bölməsini bağladıq
     public class TeamController : ControllerBase
     {
         private readonly ITeamService _teamService; // DIQQƏT: IService yox, ITeamService oldu
@@ -36,6 +38,7 @@ namespace FootballLeague.API.Controllers
 
         // GET: api/Team
         [HttpGet]
+        [AllowAnonymous] // Komandaların siyahısını hər kəs görsün
         public async Task<IActionResult> GetAll()
         {
             // 1. Bütün komandaları bazadan (Entity kimi) çəkirik
@@ -108,6 +111,7 @@ namespace FootballLeague.API.Controllers
 
         // GET: api/Team/GetStandings
         [HttpGet("[action]")]
+        [AllowAnonymous] // YENİ: Bu metoda tokensiz girmək olar
         public async Task<IActionResult> GetStandings()
         {
             var teams = await _teamService.GetStandingsAsync();

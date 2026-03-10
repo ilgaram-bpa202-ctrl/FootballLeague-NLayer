@@ -5,20 +5,19 @@ using FootballLeague.Core.Entities;
 using FootballLeague.Core.Repositories;
 using FootballLeague.Core.Services;
 using FootballLeague.Core.UnitOfWorks;
-using FootballLeague.Core.Validators; // Bunu yuxarıya əlavə et
+using FootballLeague.Core.Validators;
 using FootballLeague.DAL.Context;
 using FootballLeague.DAL.Repositories;
 using FootballLeague.DAL.UnitOfWorks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-// ... digər kodlar
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using System.Text;
 
-
-namespace FootballLeague.API    
+namespace FootballLeague.API
 {
     public class Program
     {
@@ -26,27 +25,25 @@ namespace FootballLeague.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // AppDbContext-i servislərə əlavə edirik
-            builder.Services.AddDbContext<FootballLeague.DAL.Context.AppDbContext>(options =>
+            // Baza Əlaqəsi
+            builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("SqlConnection"), sqlOptions =>
                 {
-                    // Əgər Migration-ların API qatında deyil, DAL qatında yaranmasını istəyiriksə bunu bildirməliyik:
                     sqlOptions.MigrationsAssembly("FootballLeague.DAL");
                 });
             });
 
-            // 1. Identity (İstifadəçi) Qeydiyyatı
+            // Identity Ayarları
             builder.Services.AddIdentity<AppUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
 
-            // 2. JWT Authentication (Token) Qeydiyyatı
+            // JWT Authentication
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
             })
             .AddJwtBearer(options =>
             {
@@ -58,71 +55,80 @@ namespace FootballLeague.API
                     ValidateAudience = true,
                     ValidAudience = builder.Configuration["Jwt:Audience"],
                     ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                    // appsettings.json-dakı gizli şifrəmizi oxuyuruq:
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
                 };
             });
 
-            // Bunlar proqrama deyir ki: "Kimsə səndən IGenericRepository və ya IService istəsə, get DAL və Business qatlarındakı uyğun class-ları tapıb ona ver."
-            // AddScoped o deməkdir ki, hər yeni istək (request) gələndə yeni bir obyekt yaradılır və işi bitəndə yaddaşdan silinir (performans üçün əladır).
-            builder.Services.AddScoped(typeof(FootballLeague.Core.Repositories.IGenericRepository<>), typeof(FootballLeague.DAL.Repositories.GenericRepository<>));
-            builder.Services.AddScoped(typeof(FootballLeague.Core.Services.IService<>), typeof(FootballLeague.Business.Services.Service<>));
-
-            // Mövcud olan AddScoped-ların altına əlavə et:
+            // Dependency Injection (DI)
+            builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            builder.Services.AddScoped(typeof(IService<>), typeof(Service<>));
             builder.Services.AddScoped<ITeamRepository, TeamRepository>();
             builder.Services.AddScoped<ITeamService, TeamService>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-            builder.Services.AddScoped<FootballLeague.Core.Services.IMatchService, FootballLeague.Business.Services.MatchService>();
+            builder.Services.AddScoped<IMatchService, MatchService>();
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
-            // Add services to the container.
 
-            
+            // --- SWAGGER AYARI (QIRMIZI XƏTƏLƏRİN HƏLLİ BURADADIR) ---
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new() { Title = "FootballLeague API", Version = "v1" });
+
+                // JWT Ayarı - Obyekt yaratmadan birbaşa konfiqurasiya edirik
+                c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+                    Name = "Authorization",
+                    In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                    Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+
+                c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+            });
 
             builder.Services.AddControllers()
                 .AddFluentValidation(x => x.RegisterValidatorsFromAssemblyContaining<TeamCreateDtoValidator>());
 
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll",
-                    builder =>
-                    {
-                        builder.AllowAnyOrigin()
-                               .AllowAnyMethod()
-                               .AllowAnyHeader();
-                    });
+                options.AddPolicy("AllowAll", b => b.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
             });
 
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            builder.Services.AddOpenApi();
+            // DİQQƏT: Aşağıdakı sətir Swashbuckle ilə toqquşma yarada bilər, hələlik şərhə (comment) alıram
+            //builder.Services.AddOpenApi(); 
 
-            // AutoMapper-i sistemə əlavə edirik və deyirik ki, "Get mənim yazdığım xəritəni (MapProfile) tap və öyrən"
             builder.Services.AddAutoMapper(typeof(Program));
 
             var app = builder.Build();
 
+            // Middleware Sıralaması
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
+                // app.MapOpenApi(); // Bunu da hələlik şərhə alırıq
             }
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-            }
             app.UseCustomException();
-
             app.UseHttpsRedirection();
-
             app.UseCors("AllowAll");
-
 
             app.UseAuthentication();
             app.UseAuthorization();
-
 
             app.MapControllers();
 
