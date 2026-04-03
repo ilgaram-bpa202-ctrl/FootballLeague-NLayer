@@ -1,13 +1,13 @@
 ﻿using FootballLeague.Core.Repositories;
 using FootballLeague.Core.Services;
-using FootballLeague.Core.UnitOfWorks; // Bura əlavə olundu
+using FootballLeague.Core.UnitOfWorks; 
 
 namespace FootballLeague.Business.Services
 {
     public class Service<T> : IService<T> where T : class
     {
         protected readonly IGenericRepository<T> _repository;
-        protected readonly IUnitOfWork _unitOfWork; // Bura əlavə olundu
+        protected readonly IUnitOfWork _unitOfWork; 
 
         public Service(IGenericRepository<T> repository, IUnitOfWork unitOfWork)
         {
@@ -18,7 +18,7 @@ namespace FootballLeague.Business.Services
         public async Task<T> AddAsync(T entity)
         {
             await _repository.AddAsync(entity);
-            await _unitOfWork.CommitAsync(); // SaveAsync əvəzinə UnitOfWork istifadə edirik
+            await _unitOfWork.CommitAsync(); 
             return entity;
         }
 

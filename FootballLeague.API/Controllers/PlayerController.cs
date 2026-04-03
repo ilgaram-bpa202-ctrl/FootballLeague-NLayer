@@ -2,6 +2,7 @@
 using FootballLeague.Core.DTOs;
 using FootballLeague.Core.Entities;
 using FootballLeague.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FootballLeague.API.Controllers
@@ -28,6 +29,7 @@ namespace FootballLeague.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Add(PlayerCreateDto playerDto)
         {
             var player = _mapper.Map<Player>(playerDto);
@@ -35,7 +37,16 @@ namespace FootballLeague.API.Controllers
             return Created(string.Empty, _mapper.Map<PlayerDto>(addedPlayer));
         }
 
+        [HttpPut]
+        public async Task<IActionResult> Update(PlayerDto playerDto)
+        {
+            var player = _mapper.Map<Player>(playerDto);
+            await _playerService.UpdateAsync(player);
+            return NoContent();
+        }
+
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Remove(int id)
         {
             await _playerService.RemoveAsync(id);

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FootballLeague.DAL.Context
 {
-    // DİQQƏT: DbContext əvəzinə IdentityDbContext<AppUser> oldu
     public class AppDbContext : IdentityDbContext<AppUser>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
@@ -15,12 +14,13 @@ namespace FootballLeague.DAL.Context
         public DbSet<Player> Players { get; set; }
         public DbSet<Match> Matches { get; set; }
 
+        public DbSet<News> News { get; set; }
+
+        public DbSet<Product> Products { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // ÇOX VACİB: IdentityDbContext istifadə edəndə base metodu mütləq ƏN ÜSTDƏ çağırılmalıdır!
             base.OnModelCreating(modelBuilder);
 
-            // Sənin əvvəldən yazdığın xəta önləyici kodlar öz yerində qalır:
             modelBuilder.Entity<Match>()
                 .HasOne(m => m.HomeTeam)
                 .WithMany()

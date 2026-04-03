@@ -1,15 +1,16 @@
-﻿using Microsoft.AspNetCore.Authorization; // Bunu yuxarıya əlavə et
-using AutoMapper;
+﻿using AutoMapper;
+using FootballLeague.Business.Services;
 using FootballLeague.Core.DTOs;
 using FootballLeague.Core.Entities;
 using FootballLeague.Core.Services;
+using Microsoft.AspNetCore.Authorization; 
 using Microsoft.AspNetCore.Mvc;
 
 namespace FootballLeague.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // YENİ: Qapıya qıfıl vurduq!
+    [Authorize] 
     public class MatchController : ControllerBase
     {
         private readonly IMatchService _matchService;
@@ -34,10 +35,35 @@ namespace FootballLeague.API.Controllers
         {
             var newMatch = _mapper.Map<Match>(matchDto);
 
-            // Bura dəyişdi! Artıq ağıllı metodumuzu çağırırıq
             var addedMatch = await _matchService.AddMatchAndUpdatePointsAsync(newMatch);
 
             return Created(string.Empty, _mapper.Map<MatchDto>(addedMatch));
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> Update(MatchDto matchDto)
+        {
+            var match = _mapper.Map<Match>(matchDto);
+            await _matchService.UpdateAsync(match);
+            return NoContent();
+        }
+
+        [HttpGet("{id}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var matchItem = await _matchService.GetByIdAsync(id);
+
+            var dto = _mapper.Map<MatchDto>(matchItem); 
+            return Ok(dto);
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Remove(int id)
+        {
+            await _matchService.RemoveAsync(id);
+            return NoContent(); 
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using FootballLeague.Core.Entities;
 using FootballLeague.Core.Repositories;
 using FootballLeague.Core.Services;
-using FootballLeague.Core.UnitOfWorks; // Əgər bu qırmızıdırsa, düzgün qovluğu Ctrl+. ilə tap
+using FootballLeague.Core.UnitOfWorks; 
 
 namespace FootballLeague.Business.Services
 {
@@ -9,7 +9,6 @@ namespace FootballLeague.Business.Services
     {
         private readonly ITeamRepository _teamRepository;
 
-        // Burada 'base' sözünün xətası: Service klassına həm repository, həm unitOfWork ötürülməlidir
         public TeamService(IGenericRepository<Team> repository, IUnitOfWork unitOfWork, ITeamRepository teamRepository)
     : base(repository, unitOfWork)
         {

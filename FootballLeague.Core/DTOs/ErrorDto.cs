@@ -5,7 +5,6 @@
         public List<string> Errors { get; set; } = new List<string>();
         public int Status { get; set; }
 
-        // Tək bir xəta mesajı üçün köməkçi konstruktorlar
         public ErrorDto(string error, int status)
         {
             Errors.Add(error);

@@ -16,58 +16,68 @@ namespace FootballLeague.API.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly IConfiguration _configuration;
 
-        // IConfiguration bizə appsettings.json-dakı gizli şifrəmizi (Key) oxumaq üçün lazımdır
         public AuthController(UserManager<AppUser> userManager, IConfiguration configuration)
         {
             _userManager = userManager;
             _configuration = configuration;
         }
 
-        // QEYDİYYAT METODU
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            // Yeni istifadəçi obyekti yaradırıq
-            var user = new AppUser
+            var userExists = await _userManager.FindByNameAsync(dto.UserName);
+            if (userExists != null)
+                return BadRequest("Bu istifadəçi adı artıq məşğuldur!");
+
+            var emailExists = await _userManager.FindByEmailAsync(dto.Email);
+            if (emailExists != null)
+                return BadRequest("Bu email ünvanı artıq qeydiyyatdan keçib!");
+
+            AppUser user = new AppUser()
             {
-                UserName = dto.UserName,
                 Email = dto.Email,
+                SecurityStamp = Guid.NewGuid().ToString(),
+                UserName = dto.UserName,
                 FirstName = dto.FirstName,
                 LastName = dto.LastName
+                
             };
 
-            // UserManager şifrəni avtomatik hash-ləyib bazaya yazacaq
             var result = await _userManager.CreateAsync(user, dto.Password);
 
             if (!result.Succeeded)
             {
-                return BadRequest(result.Errors); // Əgər şifrə çox sadədirsə, xəta qaytaracaq
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return BadRequest($"Qeydiyyat zamanı xəta baş verdi: {errors}");
             }
 
-            return Ok("İstifadəçi uğurla yaradıldı!");
+            await _userManager.AddToRoleAsync(user, "User");
+
+            return StatusCode(201, "Təbriklər! Qeydiyyat uğurla tamamlandı.");
         }
 
-        // GİRİŞ (LOGIN) METODU VƏ TOKEN YARADILMASI
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            // 1. İstifadəçini bazadan tapırıq
             var user = await _userManager.FindByNameAsync(dto.UserName);
 
-            // 2. Əgər istifadəçi varsa və şifrəsi doğrudursa
             if (user != null && await _userManager.CheckPasswordAsync(user, dto.Password))
             {
-                // İstifadəçi haqqında kiçik məlumatları (Claim) biletə yazırıq
-                var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                };
+                var userRoles = await _userManager.GetRolesAsync(user);
 
-                // appsettings.json-dakı möhürümüzü (Key) gətiririk
+                var authClaims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.UserName),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        };
+
+                foreach (var userRole in userRoles)
+                {
+                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                }
+
                 var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
 
-                // BİLET (TOKEN) YARADILIR!
                 var token = new JwtSecurityToken(
                     issuer: _configuration["Jwt:Issuer"],
                     audience: _configuration["Jwt:Audience"],
@@ -76,7 +86,6 @@ namespace FootballLeague.API.Controllers
                     signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
                 );
 
-                // Tokeni müştəriyə (Swagger-ə) geri göndəririk
                 return Ok(new
                 {
                     token = new JwtSecurityTokenHandler().WriteToken(token),
@@ -85,6 +94,27 @@ namespace FootballLeague.API.Controllers
             }
 
             return Unauthorized("İstifadəçi adı və ya şifrə yalnışdır!");
+        }
+
+        [HttpGet("make-me-admin")]
+        public async Task<IActionResult> MakeMeAdmin()
+        {
+            var roleManager = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.RoleManager<Microsoft.AspNetCore.Identity.IdentityRole>>();
+            var userManager = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<FootballLeague.Core.Entities.AppUser>>();
+
+
+            var user = await userManager.FindByNameAsync("ilqarmm"); 
+            if (user == null)
+                return NotFound("ilqarmm adlı istifadəçi bazada tapılmadı!");
+
+            if (!await userManager.IsInRoleAsync(user, "Admin"))
+            {
+                var result = await userManager.AddToRoleAsync(user, "Admin");
+                if (!result.Succeeded)
+                    return BadRequest(result.Errors);
+            }
+
+            return Ok("TƏBRİKLƏR! 'ilqarmm' artıq rəsmi olaraq Super Admin-dir!");
         }
     }
 }

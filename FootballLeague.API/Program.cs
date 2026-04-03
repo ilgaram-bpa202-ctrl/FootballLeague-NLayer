@@ -21,11 +21,10 @@ namespace FootballLeague.API
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Baza Əlaqəsi
             builder.Services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("SqlConnection"), sqlOptions =>
@@ -34,12 +33,10 @@ namespace FootballLeague.API
                 });
             });
 
-            // Identity Ayarları
             builder.Services.AddIdentity<AppUser, IdentityRole>()
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
 
-            // JWT Authentication
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -59,7 +56,6 @@ namespace FootballLeague.API
                 };
             });
 
-            // Dependency Injection (DI)
             builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             builder.Services.AddScoped(typeof(IService<>), typeof(Service<>));
             builder.Services.AddScoped<ITeamRepository, TeamRepository>();
@@ -69,12 +65,10 @@ namespace FootballLeague.API
 
             builder.Services.AddEndpointsApiExplorer();
 
-            // --- SWAGGER AYARI (QIRMIZI XƏTƏLƏRİN HƏLLİ BURADADIR) ---
             builder.Services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new() { Title = "FootballLeague API", Version = "v1" });
 
-                // JWT Ayarı - Obyekt yaratmadan birbaşa konfiqurasiya edirik
                 c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
                 {
                     Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
@@ -108,7 +102,6 @@ namespace FootballLeague.API
                 options.AddPolicy("AllowAll", b => b.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
             });
 
-            // DİQQƏT: Aşağıdakı sətir Swashbuckle ilə toqquşma yarada bilər, hələlik şərhə (comment) alıram
             //builder.Services.AddOpenApi(); 
 
             builder.Services.AddAutoMapper(typeof(Program));
@@ -120,7 +113,7 @@ namespace FootballLeague.API
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
-                // app.MapOpenApi(); // Bunu da hələlik şərhə alırıq
+                // app.MapOpenApi(); 
             }
 
             app.UseCustomException();
@@ -131,6 +124,21 @@ namespace FootballLeague.API
             app.UseAuthorization();
 
             app.MapControllers();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    await DataSeeder.SeedRolesAndAdminAsync(services);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Seeding zamanı xəta baş verdi: " + ex.Message);
+                }
+            }
+
+
 
             app.Run();
         }

@@ -16,7 +16,6 @@ namespace FootballLeague.DAL.Repositories
 
         public async Task<Team> GetSingleTeamWithPlayersAsync(int teamId)
         {
-            // .Include(x => x.Players) hissəsi oyunçuları komanda ilə birləşdirir
             return await _context.Teams
                 .Include(x => x.Players)
                 .FirstOrDefaultAsync(x => x.Id == teamId);
@@ -24,7 +23,6 @@ namespace FootballLeague.DAL.Repositories
 
         public async Task<List<Team>> GetStandingsAsync()
         {
-            // Futbol kurallarına göre sıralama: Puan -> Averaj -> Atılan Gol
             return await _context.Teams
                 .OrderByDescending(t => t.Points)
                 .ThenByDescending(t => t.GoalsFor - t.GoalsAgainst)

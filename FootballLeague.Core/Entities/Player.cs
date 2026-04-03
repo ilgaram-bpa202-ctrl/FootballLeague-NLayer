@@ -4,9 +4,8 @@
     {
         public string Name { get; set; }
         public string Position { get; set; }
-        public int JerseyNumber { get; set; } // Forma nömrəsi
+        public int JerseyNumber { get; set; } 
 
-        // Oyunçu 1 komandaya məxsusdur (Baza əlaqəsi)
         public int TeamId { get; set; }
         public Team Team { get; set; }
     }

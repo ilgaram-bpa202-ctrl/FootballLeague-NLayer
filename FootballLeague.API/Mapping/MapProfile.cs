@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using FootballLeague.Core.DTOs;
+using FootballLeague.Core.DTOs.News;
+using FootballLeague.Core.DTOs.Products;
 using FootballLeague.Core.Entities; // (Bayaq səndə Models əvəzinə Entities idi deyə belə yazdım, əgər fərqlidirsə uyğunlaşdırarsan)
 
 namespace FootballLeague.API.Mapping
@@ -20,6 +22,12 @@ namespace FootballLeague.API.Mapping
 
             CreateMap<Match, MatchDto>().ReverseMap();
             CreateMap<MatchCreateDto, Match>();
+
+            CreateMap<News, NewsGetDto>().ReverseMap();
+            CreateMap<NewsCreateDto, News>().ReverseMap();
+
+            CreateMap<Product, ProductGetDto>().ReverseMap();
+            CreateMap<ProductCreateDto, Product>().ReverseMap();
         }
     }
 }
